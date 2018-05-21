@@ -1,6 +1,10 @@
 # user-management-lagom
 
-This project is an example of implementation for a basic user management using Lagom Framework 1.4.5.
+Basic implementation of a user management service using :
+* Lagom 1.4.5
+* Scala 2.12.6
+* JBcrypt
+* Cassandra
 
 ## Get started
 
@@ -17,10 +21,10 @@ sbt runAll
 ```
 
 ```curl
-curl -X POST \
-  http://localhost:9000/api/users \
+curl -X POST http://localhost:9000/api/users \
   -d '{
 	"username":"foo",
+	"email": "foo@bar.com",
 	"password": "barbarbar"
   }'
 ```
@@ -102,12 +106,17 @@ object UserSerializerRegistry extends JsonSerializerRegistry {
 ## Further work
 
 ### error management
-If I have the time I will remove all the error thrown and use Eithers.
-The model would look like that:
+A better way of dealing with error is to always consider them as normal part of
+the service behaviour. To achieve this, we could use Eithers.
 
 ```
 Either[Error, T]
 ```
 
+Where Error is a generic Case class defining an error in our system
+And T is the 'everything goes right' value.
+
 ### unit testing
 The unit test kit provided by Lagom are really interesting.
+
+Cheers
