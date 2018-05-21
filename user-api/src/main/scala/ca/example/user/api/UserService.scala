@@ -22,14 +22,14 @@ trait UserService extends Service {
   def descriptor: Descriptor = {
     import Service._
     named("user").withCalls(
+      restCall(Method.GET,    "/api/users",              getUsers _),
       restCall(Method.POST,   "/api/users",              createUser _),
       restCall(Method.GET,    "/api/users/:id",          getUser _),
       restCall(Method.DELETE, "/api/users/:id",          deleteUser _),
       restCall(Method.PUT,    "/api/users/:id/verify",   verifyUser _),
       restCall(Method.PUT,    "/api/users/:id/unverify", unVerifyUser _),
-      restCall(Method.GET,    "/api/users",              getUsers _),
-      restCall(Method.POST,   "/api/users/auth/grant",   userLogin _),
       restCall(Method.POST,   "/api/users/auth",         getUserAuth _),
+      restCall(Method.POST,   "/api/users/auth/grant",   userLogin _),
       restCall(Method.POST,   "/api/users/auth/revoke",  revokeToken _),
       restCall(Method.POST,   "/api/users/auth/refresh", refreshToken _)
     )
