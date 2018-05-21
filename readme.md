@@ -117,6 +117,7 @@ Where Error is a generic Case class defining an error in our system
 And T is the 'everything goes right' value.
 
 ### unit testing
-The unit test kit provided by Lagom are really interesting.
+
+![Image of unit testing strategy](https://dannydainton.files.wordpress.com/2017/06/angtft.jpg)
 
 Cheers
