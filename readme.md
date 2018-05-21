@@ -59,10 +59,10 @@ In order to demonstrate Cassandra Readside with Lagom, two tables are being upda
 
 ### users table
 
-| id    | username | status     |
-|-------|----------|------------|
-| $UUID | john     | VERIFIED   |
-| $UUID | Maddie   | UNVERIFIED |
+| id    | username | status     |  email |
+|-------|----------|------------|--------|
+| $UUID | john     | VERIFIED   | $email |
+| $UUID | Maddie   | UNVERIFIED | $email |
 
 ### sessions table
 
@@ -70,6 +70,33 @@ In order to demonstrate Cassandra Readside with Lagom, two tables are being upda
 |--------------|---------------|------------|
 |     $UUID    |     $UUID     |    $UUID   |
 |     $UUID    |     $UUID     |    $UUID   |
+
+
+### Model evolution
+
+An example of model evolution can be found in UserEntity
+
+```scala
+object UserSerializerRegistry extends JsonSerializerRegistry {
+  override def serializers = ...
+
+  private val emailAdded = new JsonMigration(2) {
+    override def transform(fromVersion: Int, json: JsObject): JsObject = {
+      if (fromVersion < 2) {
+        json + ("email" -> JsString("example@company.ca"))
+      } else {
+        json
+      }
+    }
+  }
+
+  override def migrations = Map[String, JsonMigration](
+    classOf[CreateUser].getName -> emailAdded,
+    classOf[UserCreated].getName -> emailAdded,
+    classOf[UserAggregate].getName -> emailAdded
+  )
+}
+```
 
 
 ## Further work
@@ -84,8 +111,3 @@ Either[Error, T]
 
 ### unit testing
 The unit test kit provided by Lagom are really interesting.
-
-### Model evolution
-One of the biggest issue when going from development to production is that the understanding of the business changes over time.
-Lagom helps with that by providing Schema evolution:
-https://www.lagomframework.com/documentation/1.4.x/scala/Serialization.html#Schema-Evolution
