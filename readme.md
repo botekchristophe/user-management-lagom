@@ -49,6 +49,10 @@ curl -X PUT http://localhost:90000/api/users/{{id}}/verify
   }
 ```
 
+## Persistence entity
+
+![Image of User FSM](https://raw.githubusercontent.com/botekchristophe/user-management-lagom/master/UserFSM.png)
+
 ## ReadSide - Cassandra
 
 In order to demonstrate Cassandra Readside with Lagom, two tables are being updated by processing the event stream.
