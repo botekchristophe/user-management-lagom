@@ -32,7 +32,7 @@ class UserReadSideConnector(session: CassandraSession)(implicit ec: ExecutionCon
     session
       .selectAll(
           s"""
-            |SELECT userid FROM sessions WHERE access_token = $access_token
+            |SELECT userid FROM sessions WHERE access_token = '$access_token'
           """.stripMargin)
       .map(_.headOption.toRight("Not found").map(row => UUID.fromString(row.getString("userid"))))
   }
@@ -41,7 +41,7 @@ class UserReadSideConnector(session: CassandraSession)(implicit ec: ExecutionCon
     session
       .selectAll(
         s"""
-           |SELECT userid FROM sessions WHERE refresh_token = $refresh_token
+           |SELECT userid FROM sessions WHERE refresh_token = '$refresh_token' ALLOW FILTERING
           """.stripMargin)
       .map(_.headOption.toRight("Not found").map(row => UUID.fromString(row.getString("userid"))))
   }
@@ -50,16 +50,16 @@ class UserReadSideConnector(session: CassandraSession)(implicit ec: ExecutionCon
     session
       .selectAll(
         s"""
-           |SELECT userid FROM users WHERE username = $username
+           |SELECT id FROM users WHERE username = '$username' ALLOW FILTERING
           """.stripMargin)
-      .map(_.headOption.toRight("Not found").map(row => UUID.fromString(row.getString("userid"))))
+      .map(_.headOption.toRight("Not found").map(row => UUID.fromString(row.getString("id"))))
   }
 
   def getUser(id: UUID): Future[Either[String, UserResponse]] = {
     session
       .selectAll(
         s"""
-           |SELECT * FROM users WHERE id = $id
+           |SELECT * FROM users WHERE id = '${id.toString}'
           """.stripMargin)
       .map(_.headOption
         .toRight("User not found with id")

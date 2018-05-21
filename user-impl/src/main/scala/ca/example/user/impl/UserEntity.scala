@@ -44,8 +44,10 @@ class UserEntity extends PersistentEntity {
           ctx.invalidCommand("password too short.")
           ctx.done
         }
-
     }
+      .onCommand[DeleteUser.type, Done] { case (DeleteUser, ctx, _) => ctx.reply(Done); ctx.done }
+      .onCommand[VerifyUser.type, Done] { case (VerifyUser, ctx, _) => ctx.reply(Done); ctx.done }
+      .onCommand[UnVerifyUser.type, Done] { case (UnVerifyUser, ctx, _) => ctx.reply(Done); ctx.done }
       .onEvent {
         case (UserCreated(id, username, hash, status), _) =>
           Some(UserAggregate(
@@ -61,10 +63,25 @@ class UserEntity extends PersistentEntity {
       .onCommand[VerifyUser.type, Done] {
       case (VerifyUser, ctx, state) =>
           ctx.thenPersist(UserVerified(state.get.id))(_ => ctx.reply(Done))
+    }.onCommand[DeleteUser.type , Done] {
+      case (DeleteUser, ctx, state) =>
+        state match {
+          case Some(UserAggregate(_, id, _, _, None)) =>
+            ctx.thenPersist(UserDeleted(id))(_ => ctx.reply(Done))
+          case Some(UserAggregate(_, id, _, _, Some(session))) =>
+            ctx.thenPersistAll(
+              AccessTokenRevoked(session.access_token),
+              UserDeleted(id)
+            ){() => ctx.reply(Done) }
+        }
     }
       .onEvent {
         case (UserVerified(_), state) =>
           state.map(user => user.copy(status = UserStatus.VERIFIED))
+        case (AccessTokenRevoked(_), state) =>
+          state.map(user => user.copy(currentSession = None))
+        case (UserDeleted(_), _) =>
+          None
       }
 
   private def verified: Actions =
@@ -73,13 +90,13 @@ class UserEntity extends PersistentEntity {
       case (GrantAccessToken(password), ctx, state) =>
       state match {
         case Some(UserAggregate(_, userId, _, hash, Some(session))) if BCrypt.checkpw(password, hash) =>
-          if (session.createdOn + session.expiry < System.currentTimeMillis()) {
+          if (session.createdOn + UserSession.EXPIRY < System.currentTimeMillis()) {
             val newSession = UserSession()
             ctx.thenPersistAll(
               AccessTokenRevoked(session.access_token),
               AccessTokenGranted(userId, newSession)){() => ctx.reply(newSession) }
             } else {
-            ctx.reply(session)
+            ctx.reply(session.copy(expiry = session.createdOn + session.expiry - System.currentTimeMillis()))
             ctx.done
           }
 
@@ -127,7 +144,27 @@ class UserEntity extends PersistentEntity {
             ctx.reply(false)
             ctx.done
           case Some(UserAggregate(_, _, _, _, Some(session))) if session.createdOn + session.expiry < System.currentTimeMillis() =>
-            ctx.thenPersist(AccessTokenRevoked(session.access_token))(_ => true)
+            ctx.thenPersist(AccessTokenRevoked(session.access_token))(_ => ctx.reply(true))
+        }
+    }.onCommand[DeleteUser.type , Done] {
+      case (DeleteUser, ctx, state) =>
+        state match {
+          case Some(UserAggregate(_, id, _, _, None)) =>
+            ctx.thenPersist(UserDeleted(id))(_ => ctx.reply(Done))
+          case Some(UserAggregate(_, id, _, _, Some(session))) =>
+            ctx.thenPersistAll(
+              AccessTokenRevoked(session.access_token),
+              UserDeleted(id)
+            ){() => ctx.reply(Done) }
+        }
+    }.onCommand[UnVerifyUser.type , Done] {
+      case (UnVerifyUser, ctx, state) =>
+        state match {
+          case Some(UserAggregate(_, id, _, _, _)) =>
+            ctx.thenPersist(UserUnVerified(id))(_ => ctx.reply(Done))
+          case None =>
+            ctx.reply(Done)
+            ctx.done
         }
     }
       .onEvent {
@@ -135,6 +172,10 @@ class UserEntity extends PersistentEntity {
           state.map(user => user.copy(currentSession = Some(session)))
         case (AccessTokenRevoked(_), state) =>
           state.map(user => user.copy(currentSession = None))
+        case (UserDeleted(_), _) =>
+          None
+        case (UserUnVerified(_), state) =>
+          state.map(user => user.copy(status = UserStatus.UNVERIFIED))
       }
 }
 
@@ -159,9 +200,16 @@ object CreateUser {
 case object VerifyUser extends UserCommand[Done] {
   implicit val format: Format[VerifyUser.type] = singletonFormat(VerifyUser)
 }
+case object UnVerifyUser extends UserCommand[Done] {
+  implicit val format: Format[UnVerifyUser.type] = singletonFormat(UnVerifyUser)
+}
 case object IsSessionExpired extends UserCommand[Boolean] {
   implicit val format: Format[IsSessionExpired.type] = singletonFormat(IsSessionExpired)
 }
+case object DeleteUser extends UserCommand[Done] {
+  implicit val format: Format[DeleteUser.type] = singletonFormat(DeleteUser)
+}
+
 
 /**
   * A persisted event.
@@ -193,6 +241,16 @@ object UserVerified {
   implicit val format: Format[UserVerified] = Json.format
 }
 
+case class UserUnVerified(userId: UUID) extends UserEvent
+object UserUnVerified {
+  implicit val format: Format[UserUnVerified] = Json.format
+}
+
+case class UserDeleted(userId: UUID) extends UserEvent
+object UserDeleted {
+  implicit val format: Format[UserDeleted] = Json.format
+}
+
 /**
   * Aggregate
   */
@@ -218,10 +276,11 @@ object UserStatus extends Enumeration {
 
 case class UserSession(access_token: UUID,
                        createdOn: Long,
-                       expiry: Long, // in millis
+                       expiry: Long,
                        refresh_token: UUID)
 object UserSession {
-  def apply(): UserSession = UserSession(UUID.randomUUID(), System.currentTimeMillis(), 3600000, UUID.randomUUID())
+  final val EXPIRY: Long = 3600000
+  def apply(): UserSession = UserSession(UUID.randomUUID(), System.currentTimeMillis(), EXPIRY, UUID.randomUUID())
   implicit val format: Format[UserSession] = Json.format[UserSession]
 }
 
@@ -238,10 +297,14 @@ object UserSerializerRegistry extends JsonSerializerRegistry {
     JsonSerializer[ExtendAccessToken],
     JsonSerializer[RevokeAccessToken.type],
     JsonSerializer[IsSessionExpired.type],
+    JsonSerializer[UnVerifyUser.type],
+    JsonSerializer[DeleteUser.type],
     //events
     JsonSerializer[UserVerified],
+    JsonSerializer[UserUnVerified],
     JsonSerializer[AccessTokenGranted],
     JsonSerializer[AccessTokenRevoked],
-    JsonSerializer[UserCreated]
+    JsonSerializer[UserCreated],
+    JsonSerializer[UserDeleted]
   )
 }

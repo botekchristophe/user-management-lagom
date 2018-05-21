@@ -25,9 +25,7 @@ class UserServiceImpl(registry: PersistentEntityRegistry,
       .toRight("Missing Authorization header")
       .fold[Future[Either[String, UUID]]](
       e => throw BadRequest(e),
-      auth =>
-        readSideConnector
-          .getUserIdFromAccessToken(UUID.fromString(auth)))
+      auth => readSideConnector.getUserIdFromAccessToken(UUID.fromString(auth)))
 
   override def userLogin: ServiceCall[AuthRequest, AuthResponse] =
     ServiceCall(request =>
@@ -42,8 +40,8 @@ class UserServiceImpl(registry: PersistentEntityRegistry,
         ))
     )
 
-  override def getUserAuth: ServiceCall[NotUsed, AuthInfo] =
-    ServerServiceCall((rh, _) =>
+  override def getUserAuth: ServiceCall[String, AuthInfo] =
+    ServerServiceCall((rh, req) =>
       getUserIdFromHeader(rh)
         .flatMap(_.fold[Future[Either[String, UUID]]](
           e => Future.successful(Left(e)),
@@ -87,7 +85,7 @@ class UserServiceImpl(registry: PersistentEntityRegistry,
         ))
     )
 
-  override def verifyUser(userId: UUID): ServiceCall[String, Done] =
+  override def verifyUser(userId: UUID): ServiceCall[NotUsed, Done] =
     ServiceCall(_ =>
       refFor(userId).ask(VerifyUser)
     )
@@ -114,5 +112,15 @@ class UserServiceImpl(registry: PersistentEntityRegistry,
       readSideConnector
         .getUsers
         .map(_.toSeq)
+    )
+
+  override def deleteUser(userId: UUID): ServiceCall[NotUsed, Done] =
+    ServiceCall(_ =>
+      refFor(userId).ask(DeleteUser)
+    )
+
+  override def unVerifyUser(userId: UUID): ServiceCall[NotUsed, Done] =
+    ServiceCall(_ =>
+      refFor(userId).ask(UnVerifyUser)
     )
 }

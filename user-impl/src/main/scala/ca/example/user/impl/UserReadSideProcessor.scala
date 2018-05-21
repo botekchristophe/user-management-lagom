@@ -13,9 +13,10 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
   extends ReadSideProcessor[UserEvent] {
 
   private var insertUserStatement: PreparedStatement = _
+  private var deleteUserStatement: PreparedStatement = _
   private var insertSessionStatement: PreparedStatement = _
   private var deleteSessionStatement: PreparedStatement = _
-  private var verifyUserStatement: PreparedStatement = _
+  private var updateUserStatusStatement: PreparedStatement = _
 
 
   def buildHandler: ReadSideHandler[UserEvent] = {
@@ -23,9 +24,11 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
       .setGlobalPrepare(createTable)
       .setPrepare { tag => prepareStatements()}
       .setEventHandler[UserCreated](userCreated)
+      .setEventHandler[UserDeleted](userDeleted)
       .setEventHandler[AccessTokenGranted](accessTokenGranted)
       .setEventHandler[AccessTokenRevoked](accessTokenRevoked)
       .setEventHandler[UserVerified](userVerified)
+      .setEventHandler[UserUnVerified](userUnverified)
       .build()
   }
 
@@ -79,11 +82,19 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
           |WHERE access_token = ?
         """.stripMargin
       )
+      deleteUser <- session.prepare(
+        """
+          |DELETE
+          |FROM users
+          |WHERE id = ?
+        """.stripMargin
+      )
     } yield {
       insertUserStatement = insertUser
+      deleteUserStatement = deleteUser
       insertSessionStatement = insertSession
       deleteSessionStatement = deleteSession
-      verifyUserStatement = verifyUser
+      updateUserStatusStatement = verifyUser
       Done
     }
   }
@@ -104,7 +115,7 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
       val s = e.event.session
       List(insertSessionStatement.bind(
         s.access_token.toString,
-        s.refresh_token,
+        s.refresh_token.toString,
         e.event.userId.toString
       ))
     }
@@ -122,8 +133,27 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
   private def userVerified(e: EventStreamElement[UserVerified]) = {
     Future.successful {
       val u = e.event
-      List(verifyUserStatement.bind(
+      List(updateUserStatusStatement.bind(
         UserStatus.VERIFIED.toString,
+        u.userId.toString
+      ))
+    }
+  }
+
+  private def userUnverified(e: EventStreamElement[UserUnVerified]) = {
+    Future.successful {
+      val u = e.event
+      List(updateUserStatusStatement.bind(
+        UserStatus.UNVERIFIED.toString,
+        u.userId.toString
+      ))
+    }
+  }
+
+  private def userDeleted(e: EventStreamElement[UserDeleted]) = {
+    Future.successful {
+      val u = e.event
+      List(deleteUserStatement.bind(
         u.userId.toString
       ))
     }
