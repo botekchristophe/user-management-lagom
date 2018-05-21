@@ -1,2 +1,45 @@
+/.idea/
+/project/boot/
+/project/plugins/project
+target/
+lib_managed/
+src_managed/
+test-output/
+*.iml
+*.orig
 *.class
 *.log
+.DS_Store
+
+*~
+
+######################
+# Eclipse
+######################
+*.pydevproject
+.project
+.metadata
+bin/**
+tmp/**
+tmp/**/*
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.classpath
+.settings/
+.loadpath
+/src/main/resources/rebel.xml
+# External tool builders
+.externalToolBuilders/
+.cache
+
+#############################################
+# sbt specific (from Github recommendation)
+#############################################
+dist/*
+
+# Scala-IDE specific
+.scala_dependencies
+.cache-main
