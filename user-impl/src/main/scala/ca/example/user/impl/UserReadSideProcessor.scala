@@ -37,10 +37,16 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
       _ <- session.executeCreateTable(
         """
           |CREATE TABLE IF NOT EXISTS users (
-          |   id text, username text, status text,
+          |   id text, username text, email text, status text,
           |   PRIMARY KEY (id)
           |   )
         """.stripMargin)
+
+      _ <- session.executeWrite(
+        """
+          |ALTER TABLE users ADD email text
+        """.stripMargin)
+
       _ <- session.executeCreateTable(
         """
           |CREATE TABLE IF NOT EXISTS sessions (
@@ -57,8 +63,8 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
       insertUser <- session.prepare(
         """
           |INSERT INTO users
-          |(id, username, status)
-          |VALUES (?, ?, ?)
+          |(id, username, email, status)
+          |VALUES (?, ?, ?, ?)
         """.stripMargin
       )
       verifyUser <- session.prepare(
@@ -105,6 +111,7 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
       List(insertUserStatement.bind(
         u.userId.toString,
         u.username,
+        u.email,
         u.status.toString
       ))
     }

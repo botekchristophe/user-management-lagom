@@ -94,8 +94,8 @@ class UserServiceImpl(registry: PersistentEntityRegistry,
     ServiceCall(req => {
       val userId: UUID = UUID.randomUUID()
       refFor(userId)
-        .ask(CreateUser(userId, req.username, req.password))
-        .map(_ => UserResponse(userId, req.username, verified = false))
+        .ask(CreateUser(userId, req.username, req.password, req.email))
+        .map(_ => UserResponse(userId, req.username, req.email, verified = false))
     })
 
   override def getUser(userId: UUID): ServiceCall[NotUsed, UserResponse] =

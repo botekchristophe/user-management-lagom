@@ -7,9 +7,9 @@ import ca.example.jsonformats.JsonFormats._
 import ca.example.user.impl.UserStatus.UserStatus
 import com.lightbend.lagom.scaladsl.persistence.PersistentEntity.ReplyType
 import com.lightbend.lagom.scaladsl.persistence._
-import com.lightbend.lagom.scaladsl.playjson.{JsonSerializer, JsonSerializerRegistry}
+import com.lightbend.lagom.scaladsl.playjson.{JsonMigration, JsonSerializer, JsonSerializerRegistry}
 import org.mindrot.jbcrypt.BCrypt
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, JsObject, JsString, Json}
 
 class UserEntity extends PersistentEntity {
 
@@ -25,21 +25,22 @@ class UserEntity extends PersistentEntity {
 
   override def behavior: Behavior = {
     case None => unRegistered
-    case Some(UserAggregate(UserStatus.UNVERIFIED, _, _, _, _)) => unVerified
-    case Some(UserAggregate(UserStatus.VERIFIED, _, _, _, _)) => verified
+    case Some(UserAggregate(UserStatus.UNVERIFIED, _, _, _, _, _)) => unVerified
+    case Some(UserAggregate(UserStatus.VERIFIED, _, _, _, _, _)) => verified
 
   }
 
   private def unRegistered: Actions =
     Actions()
       .onCommand[CreateUser, Done] {
-      case (CreateUser(id, username, password), ctx, _) =>
+      case (CreateUser(id, username, password, email), ctx, _) =>
         if (password.length >= 8) {
           ctx.thenPersist(UserCreated(
             id,
             username,
             BCrypt.hashpw(password, BCrypt.gensalt),
-            UserStatus.UNVERIFIED))(_ => ctx.reply(Done))
+            UserStatus.UNVERIFIED,
+            email))(_ => ctx.reply(Done))
         } else {
           ctx.invalidCommand("password too short.")
           ctx.done
@@ -49,11 +50,12 @@ class UserEntity extends PersistentEntity {
       .onCommand[VerifyUser.type, Done] { case (VerifyUser, ctx, _) => ctx.reply(Done); ctx.done }
       .onCommand[UnVerifyUser.type, Done] { case (UnVerifyUser, ctx, _) => ctx.reply(Done); ctx.done }
       .onEvent {
-        case (UserCreated(id, username, hash, status), _) =>
+        case (UserCreated(id, username, hash, status, email), _) =>
           Some(UserAggregate(
             status,
             id,
             username,
+            email,
             hash,
             None))
       }
@@ -66,9 +68,9 @@ class UserEntity extends PersistentEntity {
     }.onCommand[DeleteUser.type , Done] {
       case (DeleteUser, ctx, state) =>
         state match {
-          case Some(UserAggregate(_, id, _, _, None)) =>
+          case Some(UserAggregate(_, id, _, _, _, None)) =>
             ctx.thenPersist(UserDeleted(id))(_ => ctx.reply(Done))
-          case Some(UserAggregate(_, id, _, _, Some(session))) =>
+          case Some(UserAggregate(_, id, _, _, _, Some(session))) =>
             ctx.thenPersistAll(
               AccessTokenRevoked(session.access_token),
               UserDeleted(id)
@@ -89,7 +91,7 @@ class UserEntity extends PersistentEntity {
       .onCommand[GrantAccessToken, UserSession] {
       case (GrantAccessToken(password), ctx, state) =>
       state match {
-        case Some(UserAggregate(_, userId, _, hash, Some(session))) if BCrypt.checkpw(password, hash) =>
+        case Some(UserAggregate(_, userId, _, _, hash, Some(session))) if BCrypt.checkpw(password, hash) =>
           if (session.createdOn + UserSession.EXPIRY < System.currentTimeMillis()) {
             val newSession = UserSession()
             ctx.thenPersistAll(
@@ -100,7 +102,7 @@ class UserEntity extends PersistentEntity {
             ctx.done
           }
 
-        case Some(UserAggregate(_, userId, _, hash, None)) if BCrypt.checkpw(password, hash) =>
+        case Some(UserAggregate(_, userId, _, _, hash, None)) if BCrypt.checkpw(password, hash) =>
           val newSession = UserSession()
           ctx.thenPersist(AccessTokenGranted(userId, newSession))(_ => ctx.reply(newSession))
 
@@ -111,7 +113,7 @@ class UserEntity extends PersistentEntity {
     }.onCommand[ExtendAccessToken, UserSession] {
       case (ExtendAccessToken(refresh_token), ctx, state) =>
         state match {
-          case Some(UserAggregate(_, userId, _, _, Some(session))) if session.refresh_token == refresh_token =>
+          case Some(UserAggregate(_, userId, _, _, _, Some(session))) if session.refresh_token == refresh_token =>
             val newSession = UserSession()
             ctx.thenPersistAll(
               AccessTokenRevoked(session.access_token),
@@ -124,10 +126,10 @@ class UserEntity extends PersistentEntity {
     }.onCommand[RevokeAccessToken.type , Done] {
       case (RevokeAccessToken, ctx, state) =>
         state match {
-          case Some(UserAggregate(_, _, _, _, None)) =>
+          case Some(UserAggregate(_, _, _, _, _, None)) =>
             ctx.reply(Done)
             ctx.done
-          case Some(UserAggregate(_, _, _, _, Some(session))) =>
+          case Some(UserAggregate(_, _, _, _, _, Some(session))) =>
             ctx.thenPersist(AccessTokenRevoked(session.access_token))(_ => ctx.reply(Done))
 
           case _ =>
@@ -137,21 +139,21 @@ class UserEntity extends PersistentEntity {
     }.onCommand[IsSessionExpired.type , Boolean] {
       case (IsSessionExpired, ctx, state) =>
         state match {
-          case Some(UserAggregate(_, _, _, _, None)) =>
+          case Some(UserAggregate(_, _, _, _, _, None)) =>
             ctx.reply(true)
             ctx.done
-          case Some(UserAggregate(_, _, _, _, Some(session))) if session.createdOn + session.expiry >= System.currentTimeMillis() =>
+          case Some(UserAggregate(_, _, _, _, _, Some(session))) if session.createdOn + session.expiry >= System.currentTimeMillis() =>
             ctx.reply(false)
             ctx.done
-          case Some(UserAggregate(_, _, _, _, Some(session))) if session.createdOn + session.expiry < System.currentTimeMillis() =>
+          case Some(UserAggregate(_, _, _, _, _, Some(session))) if session.createdOn + session.expiry < System.currentTimeMillis() =>
             ctx.thenPersist(AccessTokenRevoked(session.access_token))(_ => ctx.reply(true))
         }
     }.onCommand[DeleteUser.type , Done] {
       case (DeleteUser, ctx, state) =>
         state match {
-          case Some(UserAggregate(_, id, _, _, None)) =>
+          case Some(UserAggregate(_, id, _, _, _, None)) =>
             ctx.thenPersist(UserDeleted(id))(_ => ctx.reply(Done))
-          case Some(UserAggregate(_, id, _, _, Some(session))) =>
+          case Some(UserAggregate(_, id, _, _, _, Some(session))) =>
             ctx.thenPersistAll(
               AccessTokenRevoked(session.access_token),
               UserDeleted(id)
@@ -160,7 +162,7 @@ class UserEntity extends PersistentEntity {
     }.onCommand[UnVerifyUser.type , Done] {
       case (UnVerifyUser, ctx, state) =>
         state match {
-          case Some(UserAggregate(_, id, _, _, _)) =>
+          case Some(UserAggregate(_, id, _, _, _, _)) =>
             ctx.thenPersist(UserUnVerified(id))(_ => ctx.reply(Done))
           case None =>
             ctx.reply(Done)
@@ -193,7 +195,7 @@ case class ExtendAccessToken(refresh_token: UUID) extends UserCommand[UserSessio
 object ExtendAccessToken {
   implicit val format: Format[ExtendAccessToken] = Json.format[ExtendAccessToken]
 }
-case class CreateUser(id: UUID, username: String, password: String) extends UserCommand[Done]
+case class CreateUser(id: UUID, username: String, password: String, email: String) extends UserCommand[Done]
 object CreateUser {
   implicit val format: Format[CreateUser] = Json.format[CreateUser]
 }
@@ -231,7 +233,7 @@ case class AccessTokenRevoked(access_token: UUID) extends UserEvent
 object AccessTokenRevoked {
   implicit val format: Format[AccessTokenRevoked] = Json.format[AccessTokenRevoked]
 }
-case class UserCreated(userId: UUID, username: String, hash: String, status: UserStatus) extends UserEvent
+case class UserCreated(userId: UUID, username: String, hash: String, status: UserStatus, email: String) extends UserEvent
 object UserCreated {
   implicit val format: Format[UserCreated] = Json.format[UserCreated]
 }
@@ -259,6 +261,7 @@ object UserDeleted {
 case class UserAggregate(status: UserStatus = UserStatus.UNVERIFIED,
                          id: UUID,
                          username: String,
+                         email: String,
                          hashed_salted_pwd: String,
                          currentSession: Option[UserSession] = None)
 object UserAggregate {
@@ -306,5 +309,21 @@ object UserSerializerRegistry extends JsonSerializerRegistry {
     JsonSerializer[AccessTokenRevoked],
     JsonSerializer[UserCreated],
     JsonSerializer[UserDeleted]
+  )
+
+  private val emailAdded = new JsonMigration(2) {
+    override def transform(fromVersion: Int, json: JsObject): JsObject = {
+      if (fromVersion < 2) {
+        json + ("email" -> JsString("example@company.ca"))
+      } else {
+        json
+      }
+    }
+  }
+
+  override def migrations = Map[String, JsonMigration](
+    classOf[CreateUser].getName -> emailAdded,
+    classOf[UserCreated].getName -> emailAdded,
+    classOf[UserAggregate].getName -> emailAdded
   )
 }

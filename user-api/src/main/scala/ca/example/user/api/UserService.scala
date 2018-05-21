@@ -36,13 +36,13 @@ trait UserService extends Service {
   }
 }
 
-case class UserResponse(id: UUID, username: String, verified: Boolean)
+case class UserResponse(id: UUID, username: String, email: String, verified: Boolean)
 
 object UserResponse {
   implicit val format: Format[UserResponse] = Json.format
 }
 
-case class CreateUser(username: String, password: String)
+case class CreateUser(username: String, email: String, password: String)
 
 object CreateUser {
   implicit val format: Format[CreateUser] = Json.format

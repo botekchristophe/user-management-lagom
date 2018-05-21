@@ -21,6 +21,7 @@ class UserReadSideConnector(session: CassandraSession)(implicit ec: ExecutionCon
             UserResponse(
               UUID.fromString(row.getString("id")),
               row.getString("username"),
+              row.getString("email"),
               row.getString("status") == UserStatus.VERIFIED.toString)).toOption)
         .filter {
           case Some(_) => true
@@ -69,6 +70,7 @@ class UserReadSideConnector(session: CassandraSession)(implicit ec: ExecutionCon
             UserResponse(
               UUID.fromString(row.getString("id")),
               row.getString("username"),
+              row.getString("email"),
               row.getString("status") == UserStatus.VERIFIED.toString)).toOption.toRight("User not recoverable")))
   }
 }
