@@ -2,7 +2,7 @@
 lazy val root = (project in file("."))
   .settings(name := "user-management-lagom")
   .aggregate(userApi, userImpl,
-    jsonformats)
+    jsonformats, utils)
   .settings(commonSettings: _*)
 
 organization in ThisBuild := "ca.example"
@@ -24,6 +24,17 @@ lazy val jsonformats = (project in file("json-formats"))
     )
   )
 
+lazy val utils = (project in file("utils"))
+  .settings(commonSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      lagomScaladslApi,
+      lagomScaladslServer,
+      scalaTest
+    )
+  )
+  .dependsOn(jsonformats)
+
 lazy val userApi = (project in file("user-api"))
   .settings(commonSettings: _*)
   .settings(
@@ -32,7 +43,7 @@ lazy val userApi = (project in file("user-api"))
       playJsonDerivedCodecs
     )
   )
-  .dependsOn(jsonformats)
+  .dependsOn(jsonformats, utils)
 
 lazy val userImpl = (project in file("user-impl"))
   .settings(commonSettings: _*)
@@ -46,7 +57,6 @@ lazy val userImpl = (project in file("user-impl"))
       scalaTest
     )
   )
-
 
 def commonSettings: Seq[Setting[_]] = Seq(
 )

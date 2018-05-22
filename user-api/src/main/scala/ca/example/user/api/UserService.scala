@@ -3,20 +3,22 @@ package ca.example.user.api
 import java.util.UUID
 
 import akka.{Done, NotUsed}
+import ca.example.jsonformats.JsonFormats._
+import ca.exemple.utils.ErrorResponse
 import com.lightbend.lagom.scaladsl.api.transport.Method
 import com.lightbend.lagom.scaladsl.api.{Descriptor, Service, ServiceCall}
 import play.api.libs.json.{Format, Json}
 
 trait UserService extends Service {
-  def createUser: ServiceCall[CreateUser, UserResponse]
-  def getUser(userId: UUID): ServiceCall[NotUsed, UserResponse]
-  def deleteUser(userId: UUID): ServiceCall[NotUsed, Done]
-  def getUsers: ServiceCall[NotUsed, Seq[UserResponse]]
-  def userLogin: ServiceCall[AuthRequest, AuthResponse]
-  def getUserAuth: ServiceCall[String, AuthInfo]
-  def revokeToken: ServiceCall[NotUsed, Done]
-  def refreshToken: ServiceCall[String, AuthResponse]
-  def verifyUser(userId: UUID): ServiceCall[NotUsed, Done]
+  def createUser:                 ServiceCall[CreateUser, Either[ErrorResponse, UserResponse]]
+  def getUser(userId: UUID):      ServiceCall[NotUsed, Either[ErrorResponse, UserResponse]]
+  def deleteUser(userId: UUID):   ServiceCall[NotUsed, Done]
+  def getUsers:                   ServiceCall[NotUsed, Seq[UserResponse]]
+  def userLogin:                  ServiceCall[AuthRequest, Either[ErrorResponse, AuthResponse]]
+  def getUserAuth:                ServiceCall[String, Either[ErrorResponse, AuthInfo]]
+  def revokeToken:                ServiceCall[NotUsed, Done]
+  def refreshToken:               ServiceCall[String, Either[ErrorResponse, AuthResponse]]
+  def verifyUser(userId: UUID):   ServiceCall[NotUsed, Done]
   def unVerifyUser(userId: UUID): ServiceCall[NotUsed, Done]
 
   def descriptor: Descriptor = {

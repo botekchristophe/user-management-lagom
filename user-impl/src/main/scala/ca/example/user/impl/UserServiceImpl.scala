@@ -6,105 +6,114 @@ import akka.stream.Materializer
 import akka.{Done, NotUsed}
 import ca.example.user
 import ca.example.user.api._
+import ca.exemple.utils.{ErrorResponse, Marshaller}
 import com.lightbend.lagom.scaladsl.api.ServiceCall
 import com.lightbend.lagom.scaladsl.api.transport._
 import com.lightbend.lagom.scaladsl.persistence.PersistentEntityRegistry
 import com.lightbend.lagom.scaladsl.server.ServerServiceCall
+import ca.exemple.utils.{ErrorResponses => ER}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserServiceImpl(registry: PersistentEntityRegistry,
                       readSideConnector: UserReadSideConnector)
-                     (implicit ec: ExecutionContext, mat: Materializer) extends UserService {
+                     (implicit ec: ExecutionContext, mat: Materializer) extends UserService with Marshaller {
 
 
   private def refFor(userId: UUID) = registry.refFor[UserEntity](userId.toString)
 
-  private def getUserIdFromHeader(rh: RequestHeader): Future[Either[String, UUID]] =
+  private def getUserIdFromHeader(rh: RequestHeader): Future[Either[ErrorResponse, UUID]] =
     rh.getHeader("Authorization")
-      .toRight("Missing Authorization header")
-      .fold[Future[Either[String, UUID]]](
-      e => throw BadRequest(e),
-      auth => readSideConnector.getUserIdFromAccessToken(UUID.fromString(auth)))
+      .toRight(ER.UnAuthorized("Missing Authorization header"))
+      .fold[Future[Either[ErrorResponse, UUID]]](
+      e => Future.successful(Left(e)),
+      auth =>
+        readSideConnector
+          .getUserIdFromAccessToken(UUID.fromString(auth)))
 
-  override def userLogin: ServiceCall[AuthRequest, AuthResponse] =
-    ServiceCall(request =>
+  override def userLogin: ServiceCall[AuthRequest, Either[ErrorResponse, AuthResponse]] =
+    ServerServiceCall((_, request) =>
       readSideConnector
         .getUserIdFromUsername(request.username)
-        .flatMap(_.fold[Future[AuthResponse]](
-          e => throw NotFound(e),
+        .flatMap(_.fold[Future[Either[ErrorResponse, AuthResponse]]](
+          e => Future.successful(Left(e)),
           userId =>
             refFor(userId)
               .ask(GrantAccessToken(request.password))
-              .map(s => AuthResponse(s.access_token, s.expiry, s.refresh_token))
-        ))
+              .map(s => Right(AuthResponse(s.access_token, s.expiry, s.refresh_token)))))
+        .map(_.marshall)
     )
 
-  override def getUserAuth: ServiceCall[String, AuthInfo] =
+  override def getUserAuth: ServiceCall[String, Either[ErrorResponse, AuthInfo]] =
     ServerServiceCall((rh, req) =>
       getUserIdFromHeader(rh)
-        .flatMap(_.fold[Future[Either[String, UUID]]](
+        .flatMap(_.fold[Future[Either[ErrorResponse, UUID]]](
           e => Future.successful(Left(e)),
           userId =>
             refFor(userId)
               .ask(IsSessionExpired)
               .map(isExpired =>
                 if (isExpired) {
-                  Left("Session expired")
+                  Left(ER.UnAuthorized("Session expired"))
                 } else {
                   Right(userId)
                 })))
-        .flatMap(_.fold[Future[Either[String, UserResponse]]](
-          e => throw Forbidden(e),
+        .flatMap(_.fold[Future[Either[ErrorResponse, UserResponse]]](
+          e => Future.successful(Left(e)),
           userId => readSideConnector.getUser(userId)))
-        .flatMap(_.fold[Future[AuthInfo]](
-          e => throw Forbidden(e),
-          user => Future.successful(AuthInfo(user))))
-        .map(info => (ResponseHeader.Ok, info))
+        .map(_.fold[Either[ErrorResponse, AuthInfo]](
+          e => Left(e),
+          user => Right(AuthInfo(user))))
+        .map(_.marshall)
     )
 
   override def revokeToken: ServiceCall[NotUsed, Done] =
     ServerServiceCall((rh, _) =>
       getUserIdFromHeader(rh)
         .flatMap(_.fold[Future[Done]](
-          e => throw Forbidden(e),
+          _ => Future.successful(Done),
           userId => refFor(userId).ask(RevokeAccessToken)))
         .map(done => (ResponseHeader.Ok, done))
     )
 
-  override def refreshToken: ServiceCall[String, AuthResponse] =
-    ServiceCall(refresh_token =>
+  override def refreshToken: ServiceCall[String, Either[ErrorResponse, AuthResponse]] =
+    ServerServiceCall((_, refresh_token) =>
       readSideConnector
         .getUserIdFromRefreshToken(UUID.fromString(refresh_token))
-        .flatMap(_.fold[Future[AuthResponse]](
-          e => throw NotFound(e),
+        .flatMap(_.fold[Future[Either[ErrorResponse, AuthResponse]]](
+          e => Future.successful(Left(e)),
           userId =>
             refFor(userId)
               .ask(ExtendAccessToken(UUID.fromString(refresh_token)))
-              .map(s => AuthResponse(s.access_token, s.expiry, s.refresh_token))
-        ))
+              .map(s => Right(AuthResponse(s.access_token, s.expiry, s.refresh_token)))))
+        .map(_.marshall)
     )
 
   override def verifyUser(userId: UUID): ServiceCall[NotUsed, Done] =
-    ServiceCall(_ =>
-      refFor(userId).ask(VerifyUser)
+    ServiceCall(_ => refFor(userId).ask(VerifyUser))
+
+  override def createUser: ServiceCall[user.api.CreateUser, Either[ErrorResponse, UserResponse]] =
+    ServerServiceCall((_, req) =>
+      readSideConnector
+        .getUserIdFromUsername(req.username)
+        .flatMap(_.fold(
+          e => {
+            val userId: UUID = UUID.randomUUID()
+            refFor(userId)
+              .ask(CreateUser(userId, req.username, req.password, req.email))
+              .map(_ => Right(UserResponse(userId, req.username, req.email, verified = false)))},
+          _ => Future.successful(Left(ER.Conflict("Username taken")))))
+        .map(_.marshall)
     )
 
-  override def createUser: ServiceCall[user.api.CreateUser, UserResponse] =
-    ServiceCall(req => {
-      val userId: UUID = UUID.randomUUID()
-      refFor(userId)
-        .ask(CreateUser(userId, req.username, req.password, req.email))
-        .map(_ => UserResponse(userId, req.username, req.email, verified = false))
-    })
-
-  override def getUser(userId: UUID): ServiceCall[NotUsed, UserResponse] =
-    ServiceCall(_ =>
+  override def getUser(userId: UUID): ServiceCall[NotUsed, Either[ErrorResponse, UserResponse]] =
+    ServerServiceCall((_, _) =>
       readSideConnector
         .getUser(userId)
-        .map(_.fold[UserResponse](
-          e => throw NotFound(e),
-          identity))
+        .map(_.fold[Either[ErrorResponse, UserResponse]](
+          e => Left(e),
+          Right(_)))
+        .map(_.marshall)
     )
 
   override def getUsers: ServiceCall[NotUsed, Seq[UserResponse]] =

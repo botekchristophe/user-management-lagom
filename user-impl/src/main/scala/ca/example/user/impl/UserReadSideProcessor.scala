@@ -42,10 +42,10 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
           |   )
         """.stripMargin)
 
-      _ <- session.executeWrite(
-        """
-          |ALTER TABLE users ADD email text
-        """.stripMargin)
+      //_ <- session.executeWrite(
+      //  """
+      //    |ALTER TABLE users ADD email text
+      //  """.stripMargin)
 
       _ <- session.executeCreateTable(
         """
