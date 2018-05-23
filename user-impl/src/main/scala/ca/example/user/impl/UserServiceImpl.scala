@@ -40,7 +40,7 @@ class UserServiceImpl(registry: PersistentEntityRegistry,
           userId =>
             refFor(userId)
               .ask(GrantAccessToken(request.password))
-              .map(s => Right(AuthResponse(s.access_token, s.expiry, s.refresh_token)))))
+              .map(_.map(s => AuthResponse(s.access_token, s.expiry, s.refresh_token)))))
         .map(_.marshall)
     )
 
@@ -85,7 +85,7 @@ class UserServiceImpl(registry: PersistentEntityRegistry,
           userId =>
             refFor(userId)
               .ask(ExtendAccessToken(UUID.fromString(refresh_token)))
-              .map(s => Right(AuthResponse(s.access_token, s.expiry, s.refresh_token)))))
+              .map(_.map(s => AuthResponse(s.access_token, s.expiry, s.refresh_token)))))
         .map(_.marshall)
     )
 
