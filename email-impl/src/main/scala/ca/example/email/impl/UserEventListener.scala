@@ -8,11 +8,11 @@ import ca.example.email.api.EmailTopics
 import ca.example.user.api.{UserEventTypes, UserKafkaEvent, UserService}
 import com.lightbend.lagom.scaladsl.persistence.PersistentEntityRegistry
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Random
 
 class UserEventListener(registry: PersistentEntityRegistry,
-                        userClient: UserService) {
+                        userClient: UserService)(implicit ec: ExecutionContext)  {
 
   private def refFor(emailId: UUID) = registry.refFor[EmailEntity](emailId.toString)
 

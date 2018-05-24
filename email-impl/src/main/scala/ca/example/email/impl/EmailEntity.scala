@@ -52,8 +52,37 @@ class EmailEntity extends PersistentEntity {
               content))
       }
 
-  private def scheduled: Actions = ??? //TODO
-  private def delivered: Actions = ??? //TODO
-  private def failed: Actions = ??? //TODO
+  private def scheduled: Actions =
+    Actions()
+      .onCommand[SetEmailDelivered.type, Done] {
+      // Validate command
+      case (SetEmailDelivered, ctx, Some(email)) =>
+        ctx.thenPersistAll(
+          EmailDelivered(email.id, System.currentTimeMillis()),
+          EmailVerified(email.recipientId))(() => ctx.reply(Done))
+    }.onCommand[SetEmailFailed.type, Done] {
+      // Validate command
+      case (SetEmailFailed, ctx, Some(email)) =>
+        ctx.thenPersist(EmailDeliveryFailed(email.id))(_ => ctx.reply(Done))
+    }
+      .onCommand[ScheduleEmail, Done] { case (ScheduleEmail(_, _, _, _, _), ctx, _) => ctx.reply(Done); ctx.done }
+      .onEvent {
+        case (EmailDeliveryFailed(_), state) =>
+          state.map(email => email.copy(status = EmailStatuses.FAILED))
+        case (EmailDelivered(_, date), state) =>
+          state.map(email => email.copy(status = EmailStatuses.DELIVERED, deliveredOn = Some(date)))
+        case (EmailVerified(_), state) => state
+      }
+  private def delivered: Actions =
+    Actions()
+      .onCommand[SetEmailDelivered.type, Done] { case (SetEmailDelivered, ctx, _) => ctx.reply(Done); ctx.done }
+      .onCommand[SetEmailFailed.type, Done] { case (SetEmailFailed, ctx, _) => ctx.reply(Done); ctx.done }
+      .onCommand[ScheduleEmail, Done] { case (ScheduleEmail(_, _, _, _, _), ctx, _) => ctx.reply(Done); ctx.done }
+
+  private def failed: Actions =
+    Actions()
+      .onCommand[SetEmailDelivered.type, Done] { case (SetEmailDelivered, ctx, _) => ctx.reply(Done); ctx.done }
+      .onCommand[SetEmailFailed.type, Done] { case (SetEmailFailed, ctx, _) => ctx.reply(Done); ctx.done }
+      .onCommand[ScheduleEmail, Done] { case (ScheduleEmail(_, _, _, _, _), ctx, _) => ctx.reply(Done); ctx.done }
 }
 

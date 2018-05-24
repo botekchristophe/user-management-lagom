@@ -13,7 +13,7 @@ case class EmailAggregate(status: EmailStatus,
                           recipientAddress: String,
                           topic: EmailTopic,
                           content: String,
-                          deliveredOn: Option[String] = None)
+                          deliveredOn: Option[Long] = None)
 
 object EmailStatuses extends Enumeration {
   type EmailStatus = Value

@@ -15,7 +15,8 @@ object EmailSerializerRegistry extends JsonSerializerRegistry {
     //events
     JsonSerializer[EmailScheduled],
     JsonSerializer[EmailDelivered],
-    JsonSerializer[EmailDeliveryFailed]
+    JsonSerializer[EmailDeliveryFailed],
+    JsonSerializer[EmailVerified]
   )
 
   override def migrations = Map.empty[String, JsonMigration]

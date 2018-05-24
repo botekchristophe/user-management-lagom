@@ -1,6 +1,7 @@
 package ca.example.email.impl
 
 import ca.example.email.api.EmailService
+import ca.example.user.api.UserService
 import com.lightbend.lagom.scaladsl.api.ServiceLocator
 import com.lightbend.lagom.scaladsl.devmode.LagomDevModeComponents
 import com.lightbend.lagom.scaladsl.persistence.cassandra.CassandraPersistenceComponents
@@ -32,4 +33,6 @@ abstract class EmailApplication(context: LagomApplicationContext)
   readSide.register(wire[EmailReadSideProcessor])
   persistentEntityRegistry.register(wire[EmailEntity])
   lazy val readSideConnector: EmailReadSideConnector = wire[EmailReadSideConnector]
+  lazy val userClient: UserService = serviceClient.implement[UserService]
+  wire[UserEventListener]
 }
