@@ -11,7 +11,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSession)
                            (implicit ec: ExecutionContext)
   extends ReadSideProcessor[UserEvent] {
-
+  // Cassandra optimization: prepared statement
   private var insertUserStatement: PreparedStatement = _
   private var deleteUserStatement: PreparedStatement = _
   private var insertSessionStatement: PreparedStatement = _
@@ -22,7 +22,8 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
   def buildHandler: ReadSideHandler[UserEvent] = {
     readSide.builder[UserEvent]("userOffset")
       .setGlobalPrepare(createTable)
-      .setPrepare { tag => prepareStatements()}
+      .setPrepare { tag => prepareStatements()} 
+      // React on listened Event "UserCreated" and then call function userCreated
       .setEventHandler[UserCreated](userCreated)
       .setEventHandler[UserDeleted](userDeleted)
       .setEventHandler[AccessTokenGranted](accessTokenGranted)
