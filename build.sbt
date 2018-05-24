@@ -52,11 +52,34 @@ lazy val userImpl = (project in file("user-impl"))
   .settings(
     libraryDependencies ++= Seq(
       lagomScaladslPersistenceCassandra,
+      lagomScaladslKafkaBroker,
       macwire,
       jbcrypt,
       scalaTest
     )
+  ).dependsOn(emailApi)
+
+lazy val emailApi = (project in file("email-api"))
+  .settings(commonSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      lagomScaladslApi,
+      playJsonDerivedCodecs
+    )
   )
+  .dependsOn(jsonformats, utils)
+
+lazy val emailImpl = (project in file("email-impl"))
+  .settings(commonSettings: _*)
+  .enablePlugins(LagomScala)
+  .settings(
+    libraryDependencies ++= Seq(
+      lagomScaladslPersistenceCassandra,
+      lagomScaladslKafkaBroker,
+      macwire,
+      scalaTest
+    )
+  ).dependsOn(userApi, emailApi)
 
 def commonSettings: Seq[Setting[_]] = Seq(
 )

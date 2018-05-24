@@ -12,13 +12,39 @@ import com.lightbend.lagom.scaladsl.api.transport._
 import com.lightbend.lagom.scaladsl.persistence.PersistentEntityRegistry
 import com.lightbend.lagom.scaladsl.server.ServerServiceCall
 import ca.exemple.utils.{ErrorResponses => ER}
+import com.lightbend.lagom.scaladsl.api.broker.Topic
+import com.lightbend.lagom.scaladsl.broker.TopicProducer
 
+import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserServiceImpl(registry: PersistentEntityRegistry,
                       readSideConnector: UserReadSideConnector)
                      (implicit ec: ExecutionContext, mat: Materializer) extends UserService with Marshaller {
 
+  override def userEvents: Topic[UserKafkaEvent] =
+    TopicProducer.taggedStreamWithOffset(UserEvent.Tag.allTags.to[immutable.Seq]) { (tag, offset) =>
+      registry.eventStream(tag, offset)
+        .filter { evt =>
+          evt.event match {
+            case _: UserCreated => true
+            case _: UserVerified => true
+            case _: UserUnVerified => true
+            case _: UserDeleted => true
+            case _ => false
+          }
+        }
+        .map(ev => ev.event match {
+          case UserCreated(id, username, _, _, email) =>
+            (UserKafkaEvent(UserEventTypes.REGISTERED, id, Map("username" -> username, "email" -> email)), ev.offset)
+          case UserDeleted(id) =>
+            (UserKafkaEvent(UserEventTypes.DELETED, id), ev.offset)
+          case UserVerified(id) =>
+            (UserKafkaEvent(UserEventTypes.VERIFIED, id), ev.offset)
+          case UserUnVerified(id) =>
+            (UserKafkaEvent(UserEventTypes.UNVERIFIED, id), ev.offset)
+        })
+    }
 
   private def refFor(userId: UUID) = registry.refFor[UserEntity](userId.toString)
 

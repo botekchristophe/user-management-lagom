@@ -4,9 +4,13 @@ import java.util.UUID
 
 import akka.{Done, NotUsed}
 import ca.example.jsonformats.JsonFormats._
+import ca.example.user.api.UserEventTypes.UserEventType
 import ca.exemple.utils.ErrorResponse
+import com.lightbend.lagom.scaladsl.api.broker.Topic
+import com.lightbend.lagom.scaladsl.api.deser.DefaultExceptionSerializer
 import com.lightbend.lagom.scaladsl.api.transport.Method
 import com.lightbend.lagom.scaladsl.api.{Descriptor, Service, ServiceCall}
+import play.api.{Environment, Mode}
 import play.api.libs.json.{Format, Json}
 
 trait UserService extends Service {
@@ -20,6 +24,8 @@ trait UserService extends Service {
   def refreshToken:               ServiceCall[String, Either[ErrorResponse, AuthResponse]]
   def verifyUser(userId: UUID):   ServiceCall[NotUsed, Done]
   def unVerifyUser(userId: UUID): ServiceCall[NotUsed, Done]
+
+  def userEvents: Topic[UserKafkaEvent]
 
   def descriptor: Descriptor = {
     import Service._
@@ -35,6 +41,9 @@ trait UserService extends Service {
       restCall(Method.POST,   "/api/users/auth/revoke",  revokeToken _),
       restCall(Method.POST,   "/api/users/auth/refresh", refreshToken _)
     )
+      .withAutoAcl(true)
+      .withExceptionSerializer(new DefaultExceptionSerializer(Environment.simple(mode = Mode.Prod)))
+      .withTopics(topic("UserEvents", userEvents))
   }
 }
 
@@ -67,4 +76,19 @@ object AuthResponse {
 case class AuthInfo(user: UserResponse)
 object AuthInfo {
   implicit val format: Format[AuthInfo] = Json.format
+}
+
+case class UserKafkaEvent(event: UserEventType,
+                          id: UUID,
+                          data: Map[String, String] = Map.empty[String, String])
+
+object UserKafkaEvent {
+  implicit val format: Format[UserKafkaEvent] = Json.format
+}
+
+object UserEventTypes extends Enumeration {
+  type UserEventType = Value
+  val REGISTERED, DELETED, VERIFIED, UNVERIFIED = Value
+
+  implicit val format: Format[UserEventType] = enumFormat(UserEventTypes)
 }

@@ -27,7 +27,7 @@ class UserEntity extends PersistentEntity {
 
   private def unRegistered: Actions =
     Actions()
-      .onCommand[CreateUser, Done] {
+      .onCommand[CreateUser, Either[ErrorResponse, String]] {
       // Validate command
       case (CreateUser(id, username, password, email), ctx, _) =>
         if (password.length >= 8) {
@@ -37,9 +37,9 @@ class UserEntity extends PersistentEntity {
             username,
             BCrypt.hashpw(password, BCrypt.gensalt),
             UserStatus.UNVERIFIED,
-            email))(_ => ctx.reply(Done))
+            email))(_ => ctx.reply(Right("Created")))
         } else {
-          ctx.invalidCommand("password too short.")
+          ctx.reply(Left(ER.BadRequest("password too short")))
           ctx.done
         }
     }
@@ -140,6 +140,7 @@ class UserEntity extends PersistentEntity {
           case Some(UserAggregate(_, _, _, _, _, None)) =>
             ctx.reply(Done)
             ctx.done
+
           case Some(UserAggregate(_, _, _, _, _, Some(session))) =>
             ctx.thenPersist(AccessTokenRevoked(session.access_token))(_ => ctx.reply(Done))
 

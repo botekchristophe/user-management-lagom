@@ -22,7 +22,7 @@ case class ExtendAccessToken(refresh_token: UUID) extends UserCommand[Either[Err
 object ExtendAccessToken {
   implicit val format: Format[ExtendAccessToken] = Json.format[ExtendAccessToken]
 }
-case class CreateUser(id: UUID, username: String, password: String, email: String) extends UserCommand[Done]
+case class CreateUser(id: UUID, username: String, password: String, email: String) extends UserCommand[Either[ErrorResponse, String]]
 object CreateUser {
   implicit val format: Format[CreateUser] = Json.format[CreateUser]
 }
