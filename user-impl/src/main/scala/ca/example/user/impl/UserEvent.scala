@@ -23,6 +23,8 @@ case class AccessTokenRevoked(access_token: UUID) extends UserEvent
 object AccessTokenRevoked {
   implicit val format: Format[AccessTokenRevoked] = Json.format[AccessTokenRevoked]
 }
+
+// change name to fit business model
 case class UserCreated(userId: UUID, username: String, hash: String, status: UserStatus, email: String) extends UserEvent
 object UserCreated {
   implicit val format: Format[UserCreated] = Json.format[UserCreated]
@@ -38,6 +40,7 @@ object UserUnVerified {
   implicit val format: Format[UserUnVerified] = Json.format
 }
 
+// change name to fit business model
 case class UserDeleted(userId: UUID) extends UserEvent
 object UserDeleted {
   implicit val format: Format[UserDeleted] = Json.format
