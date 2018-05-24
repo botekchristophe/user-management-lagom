@@ -17,6 +17,7 @@ class UserEntity extends PersistentEntity {
   override type State = Option[UserAggregate]
   override def initialState: Option[UserAggregate] = None
 
+  // Check FSM
   override def behavior: Behavior = {
     case None => unRegistered
     case Some(UserAggregate(UserStatus.UNVERIFIED, _, _, _, _, _)) => unVerified
@@ -27,8 +28,10 @@ class UserEntity extends PersistentEntity {
   private def unRegistered: Actions =
     Actions()
       .onCommand[CreateUser, Done] {
+      // Validate command
       case (CreateUser(id, username, password, email), ctx, _) =>
         if (password.length >= 8) {
+          // Persist Event and Publish Internal Event
           ctx.thenPersist(UserCreated(
             id,
             username,
