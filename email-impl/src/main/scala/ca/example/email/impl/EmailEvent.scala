@@ -32,7 +32,8 @@ object EmailDelivered {
   implicit val format: Format[EmailDelivered] = Json.format
 }
 
-case class EmailDeliveryFailed(id: UUID) extends EmailEvent
+case class EmailDeliveryFailed(id: UUID,
+                               deliveredOn: Long) extends EmailEvent
 object EmailDeliveryFailed {
   implicit val format: Format[EmailDeliveryFailed] = Json.format
 }

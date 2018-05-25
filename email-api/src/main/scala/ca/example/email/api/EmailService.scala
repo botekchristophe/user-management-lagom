@@ -14,7 +14,7 @@ import play.api.libs.json.{Format, Json}
 import play.api.{Environment, Mode}
 
 trait EmailService extends Service {
-  def getEmails: ServiceCall[NotUsed, List[Email]]
+  def getEmails: ServiceCall[NotUsed, List[EmailResponse]]
 
   def emailEvents: Topic[EmailKafkaEvent]
 
@@ -29,13 +29,13 @@ trait EmailService extends Service {
   }
 }
 
-case class Email(to: String,
-                 topic: EmailTopic,
-                 content: String,
-                 delivered: Boolean,
-                 deliveredOn: Option[String] = None)
-object Email {
-  implicit val format: Format[Email] = Json.format[Email]
+case class EmailResponse(to: String,
+                         topic: EmailTopic,
+                         content: String,
+                         delivered: Boolean,
+                         deliveredOn: Option[String] = None)
+object EmailResponse {
+  implicit val format: Format[EmailResponse] = Json.format[EmailResponse]
 }
 
 object EmailTopics extends Enumeration {
@@ -54,7 +54,7 @@ object EmailKafkaEvent {
 
 object EmailEventTypes extends Enumeration {
   type EmailEventType = Value
-  val VERIFIED = Value
+  val SCHEDULED, DELIVERED, DELIVERYFAILED, VERIFIED = Value
 
   implicit val format: Format[EmailEventType] = enumFormat(EmailEventTypes)
 }

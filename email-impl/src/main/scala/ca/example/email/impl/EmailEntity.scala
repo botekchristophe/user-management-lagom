@@ -63,12 +63,12 @@ class EmailEntity extends PersistentEntity {
     }.onCommand[SetEmailFailed.type, Done] {
       // Validate command
       case (SetEmailFailed, ctx, Some(email)) =>
-        ctx.thenPersist(EmailDeliveryFailed(email.id))(_ => ctx.reply(Done))
+        ctx.thenPersist(EmailDeliveryFailed(email.id, System.currentTimeMillis()))(_ => ctx.reply(Done))
     }
       .onCommand[ScheduleEmail, Done] { case (ScheduleEmail(_, _, _, _, _), ctx, _) => ctx.reply(Done); ctx.done }
       .onEvent {
-        case (EmailDeliveryFailed(_), state) =>
-          state.map(email => email.copy(status = EmailStatuses.FAILED))
+        case (EmailDeliveryFailed(_, date), state) =>
+          state.map(email => email.copy(status = EmailStatuses.FAILED, deliveredOn = Some(date)))
         case (EmailDelivered(_, date), state) =>
           state.map(email => email.copy(status = EmailStatuses.DELIVERED, deliveredOn = Some(date)))
         case (EmailVerified(_), state) => state

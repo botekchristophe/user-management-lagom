@@ -3,6 +3,7 @@ package ca.example.user.impl
 import ca.example.email.api.EmailService
 import ca.example.user.api.UserService
 import com.lightbend.lagom.scaladsl.api.ServiceLocator
+import com.lightbend.lagom.scaladsl.broker.kafka.LagomKafkaComponents
 import com.lightbend.lagom.scaladsl.devmode.LagomDevModeComponents
 import com.lightbend.lagom.scaladsl.persistence.cassandra.CassandraPersistenceComponents
 import com.lightbend.lagom.scaladsl.playjson.JsonSerializerRegistry
@@ -25,7 +26,8 @@ class UserApplicationLoader extends LagomApplicationLoader {
 abstract class UserApplication(context: LagomApplicationContext)
   extends LagomApplication(context)
     with AhcWSComponents
-    with CassandraPersistenceComponents {
+    with CassandraPersistenceComponents
+    with LagomKafkaComponents {
 
   override lazy val lagomServer: LagomServer = serverFor[UserService](wire[UserServiceImpl])
   override lazy val jsonSerializerRegistry: JsonSerializerRegistry = UserSerializerRegistry
