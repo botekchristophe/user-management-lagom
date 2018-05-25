@@ -133,10 +133,11 @@ trait EmailService extends Service {
 In order to retrieve the history of emails processed.
 
 #### email table
-id text,recipient text,topic text,content text,status text,date text
-|  id   | recipient |  topic  |  content |   status   |   date    |
-|-------|-----------|---------|----------|------------|-----------|
-| uuid  | me@me.ca  | Welcome | Welcome !|  DELIVERED | timestamp |
+
+
+|  id   | recipient |  topic  |  content  |   status   |   date    |
+|-------|-----------|---------|-----------|------------|-----------|
+| uuid  | me@me.ca  | Welcome | Hello user|  DELIVERED | timestamp |
 
 
 
