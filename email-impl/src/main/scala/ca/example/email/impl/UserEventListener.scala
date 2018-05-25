@@ -9,7 +9,6 @@ import ca.example.user.api.{UserEventTypes, UserKafkaEvent, UserService}
 import com.lightbend.lagom.scaladsl.persistence.PersistentEntityRegistry
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Random
 
 class UserEventListener(registry: PersistentEntityRegistry,
                         userClient: UserService)(implicit ec: ExecutionContext)  {

@@ -2,9 +2,7 @@ package ca.example.email.impl
 
 import java.util.UUID
 
-import akka.Done
 import ca.example.email.api.EmailTopics.EmailTopic
-import ca.example.jsonformats.JsonFormats.singletonFormat
 import com.lightbend.lagom.scaladsl.persistence.{AggregateEvent, AggregateEventShards, AggregateEventTag, AggregateEventTagger}
 import play.api.libs.json.{Format, Json}
 

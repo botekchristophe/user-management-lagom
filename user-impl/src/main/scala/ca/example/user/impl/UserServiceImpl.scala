@@ -6,14 +6,13 @@ import akka.stream.Materializer
 import akka.{Done, NotUsed}
 import ca.example.user
 import ca.example.user.api._
-import ca.exemple.utils.{ErrorResponse, Marshaller}
+import ca.exemple.utils.{ErrorResponse, Marshaller, ErrorResponses => ER}
 import com.lightbend.lagom.scaladsl.api.ServiceCall
+import com.lightbend.lagom.scaladsl.api.broker.Topic
 import com.lightbend.lagom.scaladsl.api.transport._
+import com.lightbend.lagom.scaladsl.broker.TopicProducer
 import com.lightbend.lagom.scaladsl.persistence.PersistentEntityRegistry
 import com.lightbend.lagom.scaladsl.server.ServerServiceCall
-import ca.exemple.utils.{ErrorResponses => ER}
-import com.lightbend.lagom.scaladsl.api.broker.Topic
-import com.lightbend.lagom.scaladsl.broker.TopicProducer
 
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}

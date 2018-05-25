@@ -5,6 +5,7 @@ Basic implementation of a user management service using :
 * Scala 2.12.6
 * JBcrypt
 * Cassandra
+* Kafka
 
 ## Get started
 
@@ -29,11 +30,10 @@ curl -X POST http://localhost:9000/api/users \
   }'
 ```
 
-```curl
-curl -X PUT http://localhost:90000/api/users/{{id}}/verify
-```
 
-## API
+## User service
+
+### API
 
 ```scala
   def descriptor: Descriptor = {
@@ -53,22 +53,22 @@ curl -X PUT http://localhost:90000/api/users/{{id}}/verify
   }
 ```
 
-## Persistence entity
+### Persistence entity
 
 ![Image of User FSM](https://raw.githubusercontent.com/botekchristophe/user-management-lagom/master/UserFSM.png)
 
-## ReadSide - Cassandra
+### ReadSide - Cassandra
 
 In order to demonstrate Cassandra Readside with Lagom, two tables are being updated by processing the event stream.
 
-### users table
+#### users table
 
 | id    | username | status     |  email |
 |-------|----------|------------|--------|
 | $UUID | john     | VERIFIED   | $email |
 | $UUID | Maddie   | UNVERIFIED | $email |
 
-### sessions table
+#### sessions table
 
 | access_token | refresh_token |   userid   |
 |--------------|---------------|------------|
@@ -102,21 +102,45 @@ object UserSerializerRegistry extends JsonSerializerRegistry {
 }
 ```
 
+## Email service
 
-## Further work
+### API
 
-### error management
-A better way of dealing with error is to always consider them as normal part of
-the service behaviour. To achieve this, we could use Eithers.
+```scala
+trait EmailService extends Service {
+  def getEmails: ServiceCall[NotUsed, List[EmailResponse]]
 
+  def emailEvents: Topic[EmailKafkaEvent]
+
+  def descriptor: Descriptor = {
+    import Service._
+    named("email").withCalls(
+      restCall(Method.GET, "/api/emails", getEmails _)
+    )
+      .withAutoAcl(true)
+      .withExceptionSerializer(new DefaultExceptionSerializer(Environment.simple(mode = Mode.Prod)))
+      .withTopics(topic("EmailEvents", emailEvents))
+  }
+}
 ```
-Either[Error, T]
-```
 
-Where Error is a generic Case class defining an error in our system
-And T is the 'everything goes right' value.
+### Persistence entity
 
-### unit testing
+![Image of Email FSM](https://raw.githubusercontent.com/botekchristophe/user-management-lagom/master/EmailFSM.png)
+
+### ReadSide - Cassandra
+
+In order to retrieve the history of emails processed.
+
+#### email table
+id text,recipient text,topic text,content text,status text,date text
+|  id   | recipient |  topic  |  content |   status   |   date    |
+|-------|-----------|---------|----------|------------|-----------|
+| uuid  | me@me.ca  | Welcome | Welcome !|  DELIVERED | timestamp |
+
+
+
+## Further work - unit testing
 
 ![Image of unit testing strategy](https://dannydainton.files.wordpress.com/2017/06/angtft.jpg)
 

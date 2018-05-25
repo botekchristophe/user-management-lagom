@@ -3,9 +3,8 @@ package ca.example.user.impl
 import java.util.UUID
 
 import ca.example.user.api.UserResponse
-import ca.exemple.utils.ErrorResponse
+import ca.exemple.utils.{ErrorResponse, ErrorResponses => ER}
 import com.lightbend.lagom.scaladsl.persistence.cassandra.CassandraSession
-import ca.exemple.utils.{ErrorResponses => ER}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
