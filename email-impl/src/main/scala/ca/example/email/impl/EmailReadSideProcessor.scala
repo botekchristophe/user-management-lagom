@@ -31,9 +31,8 @@ class EmailReadSideProcessor(readSide: CassandraReadSide, session: CassandraSess
       _ <- session.executeCreateTable(
         """
           |CREATE TABLE IF NOT EXISTS emails (
-          |   id text, to text, topic text, content text, status text, date text,
-          |   PRIMARY KEY (id)
-          |   )
+          |id text,recipient text,topic text,content text,status text,date text,
+          |PRIMARY KEY (id))
         """.stripMargin)
 
     } yield Done
@@ -44,7 +43,7 @@ class EmailReadSideProcessor(readSide: CassandraReadSide, session: CassandraSess
       insertEmail <- session.prepare(
         """
           |INSERT INTO emails
-          |(id, to, topic, content, status, date)
+          |(id, recipient, topic, content, status, date)
           |VALUES (?, ?, ?, ?, ?, ?)
         """.stripMargin
       )

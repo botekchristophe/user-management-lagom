@@ -15,7 +15,7 @@ class EmailReadSideConnector(session: CassandraSession)(implicit ec: ExecutionCo
       .map(_
         .map(row =>
             EmailResponse(
-              row.getString("to"),
+              row.getString("recipient"),
               EmailTopics.withName(row.getString("topic")),
               row.getString("content"),
               EmailStatuses.withName(row.getString("status")) == EmailStatuses.DELIVERED,
