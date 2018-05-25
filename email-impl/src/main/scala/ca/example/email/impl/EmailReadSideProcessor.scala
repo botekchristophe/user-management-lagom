@@ -81,7 +81,7 @@ class EmailReadSideProcessor(readSide: CassandraReadSide, session: CassandraSess
       List(updateEmailStatement.bind(
         EmailStatuses.DELIVERED.toString,
         u.deliveredOn.toString,
-        u.id
+        u.id.toString
       ))
     }
   }
@@ -92,7 +92,7 @@ class EmailReadSideProcessor(readSide: CassandraReadSide, session: CassandraSess
       List(updateEmailStatement.bind(
         EmailStatuses.FAILED.toString,
         u.deliveredOn.toString,
-        u.id
+        u.id.toString
       ))
     }
   }

@@ -21,7 +21,7 @@ class UserEventListener(registry: PersistentEntityRegistry,
     case UserKafkaEvent(UserEventTypes.REGISTERED, userId, data) =>
       val emailId = UUID.randomUUID()
       refFor(emailId).ask(ScheduleEmail(emailId, userId, data("email"), EmailTopics.WELCOME, "Welcome on our website !"))
-        .map(_ => Random.nextInt(9) < 7) //send the actual email here. Simulating 70% success
+        .map(_ => true) //send the actual email here.
         .map(isEmailSent => {
         if (isEmailSent) {
           refFor(emailId).ask(SetEmailDelivered)
