@@ -1,4 +1,4 @@
-package ca.example.email.impl
+package ca.example.email.impl.commands
 
 import java.util.UUID
 

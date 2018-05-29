@@ -1,7 +1,8 @@
-package ca.example.email.impl
+package ca.example.email.impl.entities.internal
 
 import akka.Done
-import ca.exemple.utils.{ErrorResponses => ER}
+import ca.example.email.impl.commands.{EmailCommand, ScheduleEmail, SetEmailDelivered, SetEmailFailed}
+import ca.example.email.impl.events._
 import com.lightbend.lagom.scaladsl.persistence._
 import org.slf4j.LoggerFactory
 

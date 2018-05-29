@@ -5,12 +5,16 @@ import com.datastax.driver.core.PreparedStatement
 import com.lightbend.lagom.scaladsl.persistence.ReadSideProcessor.ReadSideHandler
 import com.lightbend.lagom.scaladsl.persistence.cassandra.{CassandraReadSide, CassandraSession}
 import com.lightbend.lagom.scaladsl.persistence.{AggregateEventTag, EventStreamElement, ReadSideProcessor}
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSession)
                            (implicit ec: ExecutionContext)
   extends ReadSideProcessor[UserEvent] {
+
+  private val log = LoggerFactory.getLogger(classOf[UserReadSideProcessor])
+
   // Cassandra optimization: prepared statement
   private var insertUserStatement: PreparedStatement = _
   private var deleteUserStatement: PreparedStatement = _
@@ -107,6 +111,7 @@ class UserReadSideProcessor(readSide: CassandraReadSide, session: CassandraSessi
   }
 
   private def userCreated(e: EventStreamElement[UserCreated]) = {
+    log.info("UserReadSideProcessor received a UserCreatedEvent")
     Future.successful {
       val u = e.event
       List(insertUserStatement.bind(

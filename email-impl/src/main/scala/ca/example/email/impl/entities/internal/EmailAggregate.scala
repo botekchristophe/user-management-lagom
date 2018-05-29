@@ -1,9 +1,9 @@
-package ca.example.email.impl
+package ca.example.email.impl.entities.internal
 
 import java.util.UUID
 
 import ca.example.email.api.EmailTopics.EmailTopic
-import ca.example.email.impl.EmailStatuses.EmailStatus
+import ca.example.email.impl.entities.internal.EmailStatuses.EmailStatus
 import ca.example.jsonformats.JsonFormats.enumFormat
 import play.api.libs.json.{Format, Json}
 

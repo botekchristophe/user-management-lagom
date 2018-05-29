@@ -1,7 +1,8 @@
-package ca.example.email.impl
+package ca.example.email.impl.readside.internal
 
 import akka.http.scaladsl.model.DateTime
 import ca.example.email.api.{EmailResponse, EmailTopics}
+import ca.example.email.impl.entities.internal.EmailStatuses
 import com.lightbend.lagom.scaladsl.persistence.cassandra.CassandraSession
 
 import scala.concurrent.{ExecutionContext, Future}

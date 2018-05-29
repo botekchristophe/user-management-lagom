@@ -1,6 +1,8 @@
-package ca.example.email.impl
+package ca.example.email.impl.readside.internal
 
 import akka.Done
+import ca.example.email.impl.entities.internal.EmailStatuses
+import ca.example.email.impl.events.{EmailDelivered, EmailDeliveryFailed, EmailEvent, EmailScheduled}
 import com.datastax.driver.core.PreparedStatement
 import com.lightbend.lagom.scaladsl.persistence.ReadSideProcessor.ReadSideHandler
 import com.lightbend.lagom.scaladsl.persistence.cassandra.{CassandraReadSide, CassandraSession}
@@ -8,7 +10,8 @@ import com.lightbend.lagom.scaladsl.persistence.{AggregateEventTag, EventStreamE
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EmailReadSideProcessor(readSide: CassandraReadSide, session: CassandraSession)
+class EmailReadSideProcessor(readSide: CassandraReadSide,
+                             session: CassandraSession)
                             (implicit ec: ExecutionContext)
   extends ReadSideProcessor[EmailEvent] {
 

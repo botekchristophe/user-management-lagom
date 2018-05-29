@@ -1,6 +1,11 @@
 package ca.example.email.impl
 
 import ca.example.email.api.EmailService
+import ca.example.email.impl.entities.internal.EmailEntity
+import ca.example.email.impl.entities.remote.UserEntity
+import ca.example.email.impl.listeners.UserEventListener
+import ca.example.email.impl.readside.internal.{EmailReadSideConnector, EmailReadSideProcessor}
+import ca.example.email.impl.readside.remote.{UserReadSideConnector, UserReadSideProcessor}
 import ca.example.user.api.UserService
 import com.lightbend.lagom.scaladsl.api.ServiceLocator
 import com.lightbend.lagom.scaladsl.broker.kafka.LagomKafkaComponents
@@ -33,8 +38,14 @@ abstract class EmailApplication(context: LagomApplicationContext)
   override lazy val jsonSerializerRegistry: JsonSerializerRegistry = EmailSerializerRegistry
 
   readSide.register(wire[EmailReadSideProcessor])
+  readSide.register(wire[UserReadSideProcessor])
+
   persistentEntityRegistry.register(wire[EmailEntity])
+  persistentEntityRegistry.register(wire[UserEntity])
+
   lazy val readSideConnector: EmailReadSideConnector = wire[EmailReadSideConnector]
+  lazy val userReadSideConnector: UserReadSideConnector = wire[UserReadSideConnector]
+
   lazy val userClient: UserService = serviceClient.implement[UserService]
   wire[UserEventListener]
 }
