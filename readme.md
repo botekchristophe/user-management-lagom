@@ -1,7 +1,7 @@
 # user-management-lagom
 
 Basic implementation of a user management service using :
-* Lagom 1.4.5
+* Lagom 1.4.11
 * Scala 2.12.6
 * JBcrypt
 * Cassandra
