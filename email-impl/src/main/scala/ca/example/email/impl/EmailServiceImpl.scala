@@ -29,9 +29,9 @@ class EmailServiceImpl(registry: PersistentEntityRegistry,
   private def refFor(emailId: UUID) = registry.refFor[EmailEntity](emailId.toString)
 
   override def getEmails: ServiceCall[NotUsed, List[EmailResponse]] = {
-    val users = userReadSideConnector.getUsers.map(_.toList)
-    log.info(s"Get Emails found theses users: ${users.foreach(println)}")
-    ServiceCall(_ => readSideConnector.getEmails.map(_.toList))
+    ServiceCall(_ =>
+      readSideConnector.getEmails.map(_.toList)
+    )
   }
 
 

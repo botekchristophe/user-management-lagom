@@ -3,7 +3,6 @@ package ca.example.email.impl
 import ca.example.email.impl.commands.{ScheduleEmail, SetEmailDelivered, SetEmailFailed}
 import ca.example.email.impl.entities.internal.EmailAggregate
 import ca.example.email.impl.events.{EmailDelivered, EmailDeliveryFailed, EmailScheduled, EmailVerified}
-import ca.example.jsonformats.JsonFormats._
 import com.lightbend.lagom.scaladsl.playjson.{JsonMigration, JsonSerializer, JsonSerializerRegistry}
 
 

@@ -31,7 +31,6 @@ class EmailEntity extends PersistentEntity {
   private def unScheduled: Actions =
     Actions()
       .onCommand[ScheduleEmail, Done] {
-      // Validate command
       case (ScheduleEmail(id, recipientId, recipientAddress, topic, content), ctx, _) =>
         log.info("Entity: ScheduleEmail Command.")
         ctx.thenPersist(
@@ -82,6 +81,7 @@ class EmailEntity extends PersistentEntity {
           log.info("Entity: EmailVerified Event.")
           state
       }
+
   private def delivered: Actions =
     Actions()
       .onCommand[SetEmailDelivered.type, Done] { case (SetEmailDelivered, ctx, _) => ctx.reply(Done); ctx.done }
