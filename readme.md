@@ -141,8 +141,4 @@ In order to retrieve the history of emails processed.
 
 
 
-## Further work - unit testing
-
-![Image of unit testing strategy](https://dannydainton.files.wordpress.com/2017/06/angtft.jpg)
-
-Cheers
+## Further work - unit testing with Lagom test kit
